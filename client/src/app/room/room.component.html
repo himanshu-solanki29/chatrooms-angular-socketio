@@ -1,0 +1,72 @@
+<div class="container pt-5 pb-5">
+
+  <div>
+    <h1 class="display-4" *ngIf="socketData">Room {{ socketData.roomDetails.roomId }}</h1>
+    <hr>
+    <!-- <p> {{ socketData | json }}</p> -->
+
+  <small class="text-muted">In this room</small>
+  <div class="d-flex justify-content-start flex-wrap mt-1 mb-3" *ngIf="socketData">
+    <span class="mx-1 my-1 alert-success rounded" *ngFor="let item of socketData.roomDetails.connectedClients">
+      <span class="badge text-dark"> {{ item.username }} <span *ngIf="item.username == user">(You)</span>&nbsp;&nbsp;<i class="fas fa-circle text-success"></i></span>
+    </span>
+  </div>
+
+    <div #chatArea class="border rounded p-2 bg-light" style="height: 60vh; overflow-y: scroll;">
+
+      <span *ngIf="messages">
+
+          <div *ngFor="let item of messages; let i = index" >
+
+            <div *ngIf="item.sender!=this.user" class=" ">
+              <div style="margin-top: 0px;">
+                <div style="font-size: 0.7em;" class="text-muted" *ngIf="i==0 || (i>0 && messages[i-1].sender!=item.sender)">{{ item.sender }}</div>
+                <div  class="alert alert-primary py-1 px-2" style="display:inline-block; margin-bottom:3px;">
+                  <span class="" >
+                    <span>{{ item.message }}</span>
+                  </span>
+                </div>
+              </div>
+              </div>
+
+            <span *ngIf="item.sender==this.user" class="d-flex justify-content-end">
+              <span style="margin-top: 3px;">
+                <small style="font-size: 0.7em;" class="text-muted" *ngIf="i==0 || (i>0 && messages[i-1].sender!=item.sender)">You</small>
+                <span  class="alert alert-warning py-1 px-2" style="display: table-cell">
+                  <span class="">
+                    <span>{{ item.message }}</span>
+                  </span>
+                </span>
+              </span>
+
+            </span>
+
+
+          </div>
+
+      </span>
+
+    </div>
+
+
+      <span class="d-flex mt-2">
+        <div class="form-group col" >
+          <input type="email" [(ngModel)]="yourMessage" id="myInput" class="form-control" style="width:99%" placeholder="Type here">
+        </div>
+        <button class="btn btn-md btn-primary col-2" [disabled]="!yourMessage" (click)="send()"><i class="fas fa-paper-plane"></i></button>
+      </span>
+      <div>
+        <button class="btn btn-md btn-danger w-100 mt-3" (click)="disconnect()">Disconnect</button>
+      </div>
+
+    <!-- <div class="form-group">
+      <input type="email" [(ngModel)]="yourMessage" id="myInput" class="form-control" placeholder="Type here">
+      <div>
+        <button class="btn btn-md btn-primary" [disabled]="!yourMessage" (click)="send()">Send</button>
+      </div>
+
+    </div> -->
+
+
+  </div>
+</div>
