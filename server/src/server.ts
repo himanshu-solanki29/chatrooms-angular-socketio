@@ -1,113 +1,146 @@
 import * as express from "express";
 import { Socket } from "socket.io";
-
 const app = express();
 const http = require("http");
 const server = http.createServer(app);
 const socket = require("socket.io");
+
+// Client/Server Config
+const clientUrl = "http://192.168.1.101:4200";
+const serverPort = 3000;
+
 const io: Socket = socket(server, {
-    allowEIO3: true, cors: {
-        origin: "http://192.168.1.100:4200",
-        credentials: true
-    }
+    maxHttpBufferSize: 10e8,
+    allowEIO3: true,
+    cors: {
+        origin: clientUrl,
+        credentials: true,
+    },
 });
 
 var messages: any = {};
 var activeUsers = [];
 
-io.on('connection', (socket: Socket) => {
+io.on("connection", (socket: Socket) => {
     console.log("New connection made", socket.id);
-    socket.on('join', (data: any) => {
 
+    socket.on("join", (data: any) => {
         let roomId = data.roomId;
-        let user=data.user;
+        let user = data.user;
 
-        console.log("roomid", data.roomId);
+        console.log("Request for roomid ::", roomId);
         if (data.roomId == null) {
             roomId = generateUniqueId();
         } else if (!messages[roomId]) {
-            console.log("Invalid Room Id");
-            io.to(socket.id).emit("invalid-room",roomId);
+            console.log("Invalid Room Id ::",roomId);
+            //Emit event back to the same socket
+            io.to(socket.id).emit("invalid-room", roomId);
             return;
         }
 
         socket.join(roomId);
+        console.log(socket.id, "with username",user,"joined the room", roomId);
 
+        // If roomId is not null and room do not exist, create a room.
+        // Else, add user to the existing room.
         if (!messages[roomId]) {
-            console.log("Creating new room");
-            let _connectedClients = [];
-            _connectedClients.push({ socketId: socket.id, username: user });
-
-            let _roomDetails = { roomId: roomId, connectedClients: _connectedClients, lastJoinedBy: user };
-
-            messages[roomId] = { roomDetails: _roomDetails };
-            console.log(messages);
+            createNewRoom(socket.id,roomId,user);
         } else {
-            messages[roomId].roomDetails.lastJoinedBy = user;
-            let _currentConnections = messages[roomId].roomDetails.connectedClients;
-            let _connectedClients = new Set(_currentConnections);
-            console.log("Room Available adding user", socket.id, user);
-            
-            _connectedClients.add({ socketId: socket.id, username: user });
-            messages[roomId].roomDetails.connectedClients = Array.from(_connectedClients);
+            addUserToRoom(socket.id,roomId,user);
         }
-        console.log(socket.id, "joined the room", roomId);
-        console.log(messages);
-        io.to(roomId).emit('new-user', { data: messages[roomId] });
 
-        socket.on("user-typing-send",(user) => {
-            
-            socket.broadcast.to(roomId).emit("user-typing-recv", { user });
+        console.log("Socket Messages ::",messages);
+
+        io.to(roomId).emit("new-user", { data: messages[roomId] });
+
+        socket.on("new-message", (messageData) => {
+            let messageDetails = sendMessageToRoom(socket.id,roomId,messageData);
+            socket.broadcast.to(roomId).emit("new-message", { messageDetails });
         });
 
-        socket.on("send-message",(messageData) => {
-            console.log("New Message",socket.id,messageData.message);
-                
-              if(!messages[roomId].messages) {
-                messages[roomId].messages = [];
-              } 
-    
-              let messageDetails = { socketId: socket.id, sender: messageData.sender, message: messageData.message};
-              console.log("messageDetails",messageDetails);
-              messages[roomId].messages.push(messageDetails);
-              console.log("messages",messages[roomId].messages);
-              console.log("sending to ",roomId);
-              
-              socket.broadcast.to(roomId).emit("receive-message", { messageDetails });
-            });
-
-
         socket.on("disconnect", () => {
-            let _currentConnections = messages[roomId].roomDetails.connectedClients;
-            let _connectedClients = new Set(_currentConnections);
-            let _username = getUsernameWithSocketId(roomId,socket.id);
-            console.log(_username);
-            _connectedClients.forEach((x:any) => (x.socketId === socket.id && x.username === _username) ? _connectedClients.delete(x) : x)
-            // _connectedClients.delete({ socketId: socket.id, username: _username });
-            console.log( "Size after removing ", (_connectedClients.size));
-            messages[roomId].roomDetails.connectedClients = Array.from(_connectedClients);
-            io.to(roomId).emit('user-disconnected', { data : _username });
-        })
+            let username = removeUserFromRoom(socket.id,roomId);
+            console.log(username, socket.id, "disconnected")
+            io.to(roomId).emit("user-disconnected", { data: username });
+        });
         // socket.broadcast.to(data.roomId).emit('new-user', { data : messages[data.roomId]});
-    })
-})
+    });
+});
+
+function createNewRoom(socketId: string, roomId: string, user: string) {
+    console.log("Creating new room");
+    let connectedClients = [];
+    connectedClients.push({ socketId: socketId, username: user });
+    let roomDetails = {
+        roomId: roomId,
+        connectedClients: connectedClients,
+        lastJoinedBy: user,
+    };
+    messages[roomId] = { roomDetails: roomDetails };
+    console.log(messages);
+}
+
+function addUserToRoom(socketId: string, roomId: string, user: string) {
+    messages[roomId].roomDetails.lastJoinedBy = user;
+    let currentConnections = messages[roomId].roomDetails.connectedClients;
+    let connectedClients = new Set(currentConnections);
+    console.log("Room Available adding user", socketId, user);
+    connectedClients.add({ socketId: socketId, username: user });
+    messages[roomId].roomDetails.connectedClients = Array.from(connectedClients);
+}
+
+function removeUserFromRoom(socketId:string, roomId:string) {
+    let currentConnections = messages[roomId].roomDetails.connectedClients;
+    let connectedClients = new Set(currentConnections);
+    let username = getUsernameWithSocketId(roomId, socketId);
+    console.log(username);
+    connectedClients.forEach((x: any) =>
+        x.socketId === socketId && x.username === username
+            ? connectedClients.delete(x)
+            : x
+    );
+    // _connectedClients.delete({ socketId: socket.id, username: _username });
+    console.log("Size after removing ", connectedClients.size);
+    messages[roomId].roomDetails.connectedClients = Array.from(connectedClients);
+    return username;
+}
+
+function sendMessageToRoom(socketId:string, roomId:string, messageData:any) {
+    console.log("new message", socket.id, messageData);
+
+    if (!messages[roomId].messages) {
+        messages[roomId].messages = [];
+    }
+
+    let messageDetails = {
+        socketId: socketId,
+        sender: messageData.sender,
+        message: messageData.message,
+        messageType: messageData.messageType,
+        timestamp : messageData.timestamp
+    };
+
+    console.log("messageDetails", messageDetails);
+    messages[roomId].messages.push(messageDetails);
+    console.log("messages", messages[roomId].messages);
+    console.log("broadcasting to ", roomId);
+    return messageDetails;
+}
 
 function generateUniqueId() {
     return Math.random().toString(36).substr(2, 9);
 }
 
-function getUsernameWithSocketId(roomId:string, socketId:string) {
-    let _clientDetails = messages[roomId].roomDetails.connectedClients.find( (e:any)=> { return e.socketId === socketId });
-    console.log(_clientDetails);
-    return _clientDetails.username;
+function getUsernameWithSocketId(roomId: string, socketId: string) {
+    let clientDetails = messages[roomId].roomDetails.connectedClients.find(
+        (e: any) => {
+            return e.socketId === socketId;
+        }
+    );
+    console.log(clientDetails);
+    return clientDetails.username;
 }
 
-server.listen(3000,"0.0.0.0", () => console.log("Server is listening on port 3000"));
-
-
-
-
-
-
-
-
+server.listen(serverPort, "0.0.0.0", () =>
+    console.log(`Server is listening on port ${serverPort}`)
+);
