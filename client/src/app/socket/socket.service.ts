@@ -27,7 +27,7 @@ export class SocketService {
   }
 
   sendMessage(message) {
-    this.socket.emit("send-message",message);
+    this.socket.emit("new-message",message);
   }
 
   disconnect() {
@@ -39,7 +39,7 @@ export class SocketService {
   }
 
   receivedMsgEvent() {
-    return this.getEventObservable("receive-message");
+    return this.getEventObservable("new-message");
   }
 
   newUserJoined() {
