@@ -1,40 +1,96 @@
-<div class="container pt-5 pb-5">
+<mat-toolbar color="primary">
+  <span *ngIf="socketData">Room {{ socketData.roomDetails.roomId }}</span>
+
+    <div class="col d-flex justify-content-end">
+      <button mat-icon-button class="" [matMenuTriggerFor]="menu">
+        <mat-icon>more_vert</mat-icon>
+   </button>
+    </div>
+</mat-toolbar>
+
+<mat-menu #menu="matMenu">
+  <button mat-menu-item (click)="disconnect()">
+    <!-- <mat-icon>dialpad</mat-icon> -->
+    <span>Disconnect</span>
+  </button>
+</mat-menu>
+
+<div class="container pt-3 pb-5">
 
   <div>
-    <h1 class="display-4" *ngIf="socketData">Room {{ socketData.roomDetails.roomId }}</h1>
-    <hr>
+    <!-- <h6 class="display-4" *ngIf="socketData">Room {{ socketData.roomDetails.roomId }}</h6> -->
+    <!-- <hr> -->
     <!-- <p> {{ socketData | json }}</p> -->
 
-  <small class="text-muted">In this room</small>
-  <div class="d-flex justify-content-start flex-wrap mt-1 mb-3" *ngIf="socketData">
+  <small class="text-muted" *ngIf="socketData">In this room ({{ socketData.roomDetails.connectedClients.length }}) </small>
+
+  <div class="d-flex justify-content-start mt-1 mb-3" *ngIf="socketData" style="overflow-x: scroll;">
     <span class="mx-1 my-1 alert-success rounded" *ngFor="let item of socketData.roomDetails.connectedClients">
       <span class="badge text-dark"> {{ item.username }} <span *ngIf="item.username == user">(You)</span>&nbsp;&nbsp;<i class="fas fa-circle text-success"></i></span>
     </span>
   </div>
+  <hr>
 
-    <div #chatArea class="border rounded p-2 bg-light" style="height: 60vh; overflow-y: scroll;">
+    <div #chatArea class="px-0 pb-3" style="height: 60vh; overflow-y: scroll;">
 
       <span *ngIf="messages">
 
           <div *ngFor="let item of messages; let i = index" >
 
+
+            <div class="text-center" *ngIf="i==0">
+              <span class="alert alert-secondary px-1 py-0"><small style="line-height: 0; font-size: 0.6em;">{{ messages[i].timestamp | date : 'dd MMMM yyyy' }}</small></span>
+            </div>
+
+            <div class="text-center" *ngIf="i>0 && displayChatDate(messages[i-1].timestamp,messages[i].timestamp)">
+              <span class="alert alert-secondary px-1 py-0"><small style="line-height: 0; font-size: 0.6em;">{{ displayChatDate(messages[i-1].timestamp,messages[i].timestamp) | date : 'dd MMMM yyyy' }}</small></span>
+            </div>
+
+
             <div *ngIf="item.sender!=this.user" class=" ">
               <div style="margin-top: 0px;">
-                <div style="font-size: 0.7em;" class="text-muted" *ngIf="i==0 || (i>0 && messages[i-1].sender!=item.sender)">{{ item.sender }}</div>
-                <div  class="alert alert-primary py-1 px-2" style="display:inline-block; margin-bottom:3px;">
+
+              <div style="font-size: 0.7em;" class="text-muted" *ngIf="i==0 || (i>0 && messages[i-1].sender!=item.sender)">{{ item.sender }}</div>
+
+              <div *ngIf="item.messageType === 'image'" style="display:inline-block;">
+                <img src="{{ item.message }}" class="rounded" style="max-width:250px;">
+                <small class="text-muted d-flex justify-content-end pt-2 pb-1" style="line-height: 0; font-size: 0.6em;">{{ item.timestamp | date : 'hh:mm a' }}</small>
+              </div>
+
+                <div *ngIf="item.messageType === 'text' && sayLoud(item.message)" style="display:inline-block;">
+                  <h1> {{ item.message.substring(3,item.message.length) }} </h1>
+                  <small class="text-muted d-flex justify-content-end pt-2 pb-1" style="line-height: 0; font-size: 0.6em;">{{ item.timestamp | date : 'hh:mm a' }}</small>
+                  </div>
+
+                <div *ngIf="item.messageType === 'text' && !sayLoud(item.message)" class="alert alert-primary py-1 px-2" style="display:inline-block; margin-bottom:3px;">
                   <span class="" >
-                    <span>{{ item.message }}</span>
+                    <span style="line-height: 0;">{{ item.message }}</span><br>
+                    <small class="text-muted d-flex justify-content-end pt-2 pb-1" style="line-height: 0; font-size: 0.6em;">{{ item.timestamp | date : 'hh:mm a' }}</small>
                   </span>
                 </div>
+
               </div>
+
               </div>
 
             <span *ngIf="item.sender==this.user" class="d-flex justify-content-end">
               <span style="margin-top: 3px;">
                 <small style="font-size: 0.7em;" class="text-muted" *ngIf="i==0 || (i>0 && messages[i-1].sender!=item.sender)">You</small>
-                <span  class="alert alert-warning py-1 px-2" style="display: table-cell">
+
+                <div *ngIf="item.messageType === 'image'">
+                  <img src="{{ item.message }}" class="rounded" style="max-width:250px;">
+                   <small class="text-muted d-flex justify-content-end pt-2 pb-1" style="line-height: 0; font-size: 0.6em;">{{ item.timestamp | date : 'hh:mm a' }}</small>
+                 </div>
+
+                <div *ngIf="item.messageType === 'text' && sayLoud(item.message)">
+                <h1> {{ item.message.substring(3,item.message.length) }} </h1>
+                <small class="text-muted d-flex justify-content-end pt-2 pb-1" style="line-height: 0; font-size: 0.6em;">{{ item.timestamp | date : 'hh:mm a' }}</small>
+                </div>
+
+                <span *ngIf="item.messageType === 'text' && !sayLoud(item.message)" class="alert alert-warning py-1 px-2" style="display: table-cell">
                   <span class="">
                     <span>{{ item.message }}</span>
+                    <small class="text-muted d-flex justify-content-end pt-2 pb-1" style="line-height: 0; font-size: 0.6em;">{{ item.timestamp | date : 'hh:mm a' }}</small>
                   </span>
                 </span>
               </span>
@@ -51,13 +107,15 @@
 
       <span class="d-flex mt-2">
         <div class="form-group col" >
-          <input type="email" [(ngModel)]="yourMessage" id="myInput" class="form-control" style="width:99%" placeholder="Type here">
+          <textarea type="text" [(ngModel)]="yourMessage" id="myInput" class="form-control" style="width:99%" placeholder="Type here"></textarea>
         </div>
-        <button class="btn btn-md btn-primary col-2" [disabled]="!yourMessage" (click)="send()"><i class="fas fa-paper-plane"></i></button>
+        <button class="btn btn-md btn-primary col-2" [disabled]="!yourMessage" (click)="send('text')"><i class="fas fa-paper-plane"></i></button>
       </span>
-      <div>
+
+
+      <!-- <div>
         <button class="btn btn-md btn-danger w-100 mt-3" (click)="disconnect()">Disconnect</button>
-      </div>
+      </div> -->
 
     <!-- <div class="form-group">
       <input type="email" [(ngModel)]="yourMessage" id="myInput" class="form-control" placeholder="Type here">

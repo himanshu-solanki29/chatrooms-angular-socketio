@@ -6,14 +6,15 @@ import { AppComponent } from './app.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { NotifierModule } from 'angular-notifier';
-import { RoomComponent } from './room/room.component';
+import { RoomComponent, SendImageComponent } from './room/room.component';
 import { HomeComponent } from './home/home.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     RoomComponent,
-    HomeComponent
+    HomeComponent,
+    SendImageComponent
   ],
   imports: [
     BrowserModule,
@@ -25,6 +26,7 @@ import { HomeComponent } from './home/home.component';
     NotifierModule.withConfig( { position: { vertical: { position: 'top'} } } )
   ],
   providers: [],
+  entryComponents: [SendImageComponent],
   bootstrap: [AppComponent]
 })
 export class AppModule { }
