@@ -37,6 +37,10 @@ export class HomeComponent implements OnInit {
         console.log(data);
 
         this.nfs.notify('error',`Invalid room id ${ data }. Please check the roomId and try again.`);
+      });
+
+      this.socketService.invalidUserName().subscribe((data) => {
+        this.nfs.notify('error',`User with user id ${ data } already exists in the room ${this.room}`);
       })
   }
   ngOnInit() {

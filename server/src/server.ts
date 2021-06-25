@@ -6,7 +6,7 @@ const server = http.createServer(app);
 const socket = require("socket.io");
 
 // Client/Server Config
-const clientUrl = "http://192.168.1.101:4200";
+const clientUrl = "http://localhost:4200";
 const serverPort = 3000;
 
 const io: Socket = socket(server, {
@@ -31,12 +31,15 @@ io.on("connection", (socket: Socket) => {
         console.log("Request for roomid ::", roomId);
         if (data.roomId == null) {
             roomId = generateUniqueId();
-        } else if (!messages[roomId]) {
+        } else if(!messages[roomId]) {
             console.log("Invalid Room Id ::",roomId);
             //Emit event back to the same socket
             io.to(socket.id).emit("invalid-room", roomId);
             return;
-        }
+        } else if (!isUsernameAllowed(user,roomId)) {
+            io.to(socket.id).emit("invalid-user", user);
+             return;
+        } 
 
         socket.join(roomId);
         console.log(socket.id, "with username",user,"joined the room", roomId);
@@ -125,6 +128,21 @@ function sendMessageToRoom(socketId:string, roomId:string, messageData:any) {
     console.log("messages", messages[roomId].messages);
     console.log("broadcasting to ", roomId);
     return messageDetails;
+}
+
+function isUsernameAllowed(username:string, roomId:string) {
+
+
+        let userInRoom = messages[roomId].roomDetails.connectedClients.find(
+            (e: any) => {
+                return e.username.toLowerCase() === username.toLowerCase();
+            }
+        );
+
+        console.log("User in room::", userInRoom);
+        if(userInRoom) return false;
+        return true;
+ 
 }
 
 function generateUniqueId() {

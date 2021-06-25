@@ -37,9 +37,10 @@ export class RoomComponent implements OnInit, AfterViewChecked, OnDestroy  {
         window.addEventListener('paste', (e:ClipboardEvent) => {
               // console.log("Pasted", e);
 
+
              for (let i = 0; i < e.clipboardData.items.length; i++) {
               var clipboardItem = e.clipboardData.items[i];
-              // console.log(clipboardItem);
+               console.log(clipboardItem);
               var type = clipboardItem.type;
               // console.log(type);
               if (type.indexOf("image") != -1) {
@@ -118,6 +119,11 @@ export class RoomComponent implements OnInit, AfterViewChecked, OnDestroy  {
 
   this.socketService.invalidRoom().pipe().subscribe((data) => {
     this.nfs.notify('error',`Invalid room id ${ data }. Please check the roomId and try again.`);
+    this.router.navigate(['']);
+  });
+
+  this.socketService.invalidUserName().subscribe((data) => {
+    this.nfs.notify('error',`User with user id ${ data } already exists in the room ${this.roomId}`);
     this.router.navigate(['']);
   });
 
@@ -240,19 +246,18 @@ export class SendImageComponent{
   }
 
   send() {
-    this.bottomSheetRef.dismiss({ base64String : this.base64String});
+    this.bottomSheetRef.dismiss({ base64String : this.base64String });
   }
 
   ngAfterViewChecked(): void {
     let canvas = document.createElement('canvas');
     let img = this.image.nativeElement;
     // console.log(img);
-    canvas.height = img.naturalHeight;
-    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight/2;
+    canvas.width = img.naturalWidth/2;
     let ctx = canvas.getContext('2d');
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     // console.log(canvas.toDataURL());
-
     this.base64String = canvas.toDataURL();
 
   }

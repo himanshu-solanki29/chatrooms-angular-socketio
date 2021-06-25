@@ -50,6 +50,10 @@ export class SocketService {
    return this.getEventObservable("invalid-room");
   }
 
+  invalidUserName() {
+    return this.getEventObservable("invalid-user");
+   }
+
   getEventObservable(eventName) {
     let observable = new Observable<any>((observer)=> {
       this.socket.on(eventName, (data)=> {
